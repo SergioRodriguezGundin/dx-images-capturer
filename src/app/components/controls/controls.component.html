@@ -1,0 +1,30 @@
+<div class="flex flex-col gap-4">
+    <div class="flex gap-4">
+        <button *ngIf="!isCapturing()" (click)="start.emit()" [disabled]="isRecording()"
+            class="w-full text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-800 font-medium rounded-lg text-sm px-5 py-2.5 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed">
+            Start Capture
+        </button>
+
+        <button *ngIf="isCapturing()" (click)="stop.emit()"
+            class="w-full text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:ring-red-800 font-medium rounded-lg text-sm px-5 py-2.5 focus:outline-none">
+            Stop Capture
+        </button>
+    </div>
+
+    <!-- Recording Controls -->
+    <div class="flex gap-4">
+        <button *ngIf="!isRecording()" (click)="startRecord.emit()" [disabled]="isCapturing()"
+            class="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-800 font-medium rounded-lg text-sm px-5 py-2.5 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed">
+            Start Recording
+        </button>
+
+        <button *ngIf="isRecording()" (click)="stopRecord.emit()"
+            class="w-full text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:ring-red-800 font-medium rounded-lg text-sm px-5 py-2.5 focus:outline-none flex items-center justify-center gap-2">
+            <span class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+            </span>
+            Stop Recording
+        </button>
+    </div>
+</div>

@@ -1,0 +1,15 @@
+<div class="flex flex-col gap-2">
+  <label class="text-sm font-medium text-gray-300">Target Window</label>
+  <div class="flex gap-2">
+    <select [ngModel]="selectedWindowId()" (ngModelChange)="selectedWindowId.set($event); onSelectionChange()"
+      class="flex-1 bg-gray-800 border border-gray-700 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 w-full">
+      <option *ngFor="let win of windows()" [value]="win.id">
+        {{ win.app_name }} - {{ win.title }}
+      </option>
+    </select>
+    <button (click)="refreshWindows()"
+      class="p-2.5 text-sm font-medium text-white bg-gray-700 rounded-lg border border-gray-700 hover:bg-gray-600 focus:ring-4 focus:outline-none focus:ring-gray-600">
+      ↻
+    </button>
+  </div>
+</div>

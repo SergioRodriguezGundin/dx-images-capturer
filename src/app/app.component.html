@@ -1,0 +1,59 @@
+<main class="mx-auto p-8 h-screen flex flex-col items-center justify-center bg-gray-900 text-white">
+  <div class="w-full max-w-md bg-gray-800 rounded-xl shadow-2xl overflow-hidden border border-gray-700">
+
+    <!-- Header -->
+    <div class="bg-gray-900 p-6 border-b border-gray-700">
+      <h1
+        class="text-2xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
+        Game Capture
+      </h1>
+      <p class="text-center text-gray-400 text-sm mt-1">Dataset Collection Tool</p>
+    </div>
+
+    <!-- Content -->
+    <div class="p-6 space-y-6">
+
+      <app-window-selector (windowSelected)="selectedWindowId.set($event)">
+      </app-window-selector>
+
+      <app-interval-selector (intervalChange)="captureInterval.set($event)">
+      </app-interval-selector>
+
+      <div class="pt-4 border-t border-gray-700">
+        <app-controls [isCapturing]="captureService.isCapturing()" [isRecording]="captureService.isRecording()"
+          (start)="onStart()" (stop)="onStop()" (startRecord)="onRecordStart()" (stopRecord)="onRecordStop()">
+        </app-controls>
+      </div>
+
+    </div>
+
+    <!-- Status Footer -->
+    <div class="bg-gray-900 p-4 text-xs border-t border-gray-700">
+
+      <!-- Capture Directory Panel -->
+      <div class="mb-3 p-3 bg-gray-800 rounded border border-gray-700">
+        <div class="text-gray-400 font-semibold mb-1">Save Location:</div>
+        <div class="font-mono text-gray-300 break-all select-all">
+          {{ baseCapturePath() || 'Loading...' }}
+        </div>
+      </div>
+
+      <div class="text-center">
+        <div *ngIf="captureService.isCapturing()" class="text-green-400 animate-pulse font-medium">
+          ● Capturing active
+        </div>
+        <div *ngIf="captureService.isRecording()" class="text-red-400 animate-pulse font-medium">
+          ● Recording active
+        </div>
+        <div *ngIf="!captureService.isCapturing() && !captureService.isRecording()" class="text-gray-500">
+          Ready to capture or record
+        </div>
+        <div *ngIf="captureService.lastCapturePath() as path"
+          class="mt-2 text-gray-600 px-2 font-mono text-xs break-all">
+          Last: {{ path }}
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>

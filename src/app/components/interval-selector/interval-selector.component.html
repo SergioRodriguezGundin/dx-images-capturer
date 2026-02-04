@@ -1,0 +1,6 @@
+<div class="flex flex-col gap-2">
+    <label class="text-sm font-medium text-gray-300">Capture Interval (ms)</label>
+    <input type="number" [ngModel]="interval()" (ngModelChange)="interval.set($event); onIntervalChange()" min="100"
+        step="100"
+        class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+</div>
