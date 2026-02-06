@@ -26,4 +26,5 @@ xcap = "0.7.1"
 image = "0.25.9"
 chrono = "0.4.42"
 tokio = "1.48.0"
+ffmpeg-sidecar = { version = "2.4.0", features = ["download_ffmpeg"] }
 

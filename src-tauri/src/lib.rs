@@ -1,11 +1,30 @@
 use image::ImageFormat;
 use std::io::Write;
+use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::{Emitter, Manager, State};
 use xcap::Window;
+
+/// Finds the ffmpeg binary path: checks the sidecar directory first, then falls back to system PATH.
+fn find_ffmpeg_binary() -> Result<PathBuf, String> {
+    // Check sidecar directory first (managed by ffmpeg-sidecar crate)
+    if let Ok(dir) = ffmpeg_sidecar::paths::sidecar_dir() {
+        let name = if cfg!(target_os = "windows") {
+            "ffmpeg.exe"
+        } else {
+            "ffmpeg"
+        };
+        let path = dir.join(name);
+        if path.exists() {
+            return Ok(path);
+        }
+    }
+    // Fallback to system PATH
+    Ok(PathBuf::from("ffmpeg"))
+}
 
 struct CaptureState {
     is_capturing: bool,
@@ -147,6 +166,16 @@ fn get_capture_path(app_handle: tauri::AppHandle) -> Result<String, String> {
 }
 
 #[tauri::command]
+fn ensure_ffmpeg() -> Result<String, String> {
+    if ffmpeg_sidecar::command::ffmpeg_is_installed() {
+        return Ok("FFmpeg is already available".to_string());
+    }
+    ffmpeg_sidecar::download::auto_download()
+        .map_err(|e| format!("Failed to download FFmpeg: {}", e))?;
+    Ok("FFmpeg downloaded successfully".to_string())
+}
+
+#[tauri::command]
 fn start_record(
     app_handle: tauri::AppHandle,
     state: State<'_, AppState>,
@@ -157,6 +186,14 @@ fn start_record(
     if recording_process.is_some() {
         return Err("Already recording".to_string());
     }
+
+    // Ensure ffmpeg is available before attempting to record
+    if !ffmpeg_sidecar::command::ffmpeg_is_installed() {
+        ffmpeg_sidecar::download::auto_download()
+            .map_err(|e| format!("FFmpeg not available and download failed: {}", e))?;
+    }
+
+    let ffmpeg_path = find_ffmpeg_binary()?;
 
     // Find the window to get the title
     let windows = Window::all().map_err(|e| e.to_string())?;
@@ -194,10 +231,9 @@ fn start_record(
     let filename = format!("recording_{}.mp4", timestamp);
     let output_path = captures_dir.join(filename);
 
-    // Spawn ffmpeg
-    // ffmpeg -f gdigrab -framerate 30 -i title="Window Title" -vcodec libx264 -preset ultrafast -crf 23 output.mp4
-    let child = Command::new("ffmpeg")
-        .arg("-f")
+    // Build the ffmpeg command with encoding settings compatible with Windows Media Player
+    let mut cmd = Command::new(&ffmpeg_path);
+    cmd.arg("-f")
         .arg("gdigrab")
         .arg("-framerate")
         .arg("30")
@@ -205,12 +241,32 @@ fn start_record(
         .arg(format!("title={}", window_title))
         .arg("-vcodec")
         .arg("libx264")
+        .arg("-pix_fmt")
+        .arg("yuv420p") // Required: gdigrab captures BGRA, yuv420p is the universally supported format
+        .arg("-profile:v")
+        .arg("baseline") // Baseline profile for maximum player compatibility
+        .arg("-level")
+        .arg("4.0")
         .arg("-preset")
         .arg("ultrafast")
         .arg("-crf")
         .arg("23")
+        .arg("-movflags")
+        .arg("+faststart") // Move moov atom to the beginning for instant playback
         .arg(output_path.to_string_lossy().to_string())
-        .stdin(Stdio::piped()) // Enable stdin to send 'q' later
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+
+    // On Windows, prevent a console window from popping up
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    let child = cmd
         .spawn()
         .map_err(|e| format!("Failed to start ffmpeg: {}", e))?;
 
@@ -272,6 +328,7 @@ pub fn run() {
             start_capture,
             stop_capture,
             get_capture_path,
+            ensure_ffmpeg,
             start_record,
             stop_record
         ])

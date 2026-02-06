@@ -16,8 +16,11 @@ export class CaptureService {
   isRecording = signal(false);
   lastCapturePath = signal<string | null>(null);
 
+  ffmpegReady = signal(false);
+
   constructor() {
     this.setupListeners();
+    this.ensureFfmpeg();
   }
 
   private async setupListeners() {
@@ -32,6 +35,15 @@ export class CaptureService {
     await listen('recording-stopped', () => {
       this.isRecording.set(false);
     });
+  }
+
+  private async ensureFfmpeg() {
+    try {
+      await invoke<string>('ensure_ffmpeg');
+      this.ffmpegReady.set(true);
+    } catch (error) {
+      console.error('Failed to ensure FFmpeg is available:', error);
+    }
   }
 
   async getWindows(): Promise<WindowInfo[]> {
