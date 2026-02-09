@@ -11,13 +11,18 @@
     </div>
 
     <!-- Content -->
-    <div class="p-6 space-y-6">
+    <div class="flex flex-col gap-3 p-6">
 
       <app-window-selector (windowSelected)="selectedWindowId.set($event)">
       </app-window-selector>
 
       <app-interval-selector (intervalChange)="captureInterval.set($event)">
       </app-interval-selector>
+
+      <app-folder-to-save
+        [disabled]="captureService.isCapturing() || captureService.isRecording()"
+        (folderNameChange)="subfolderName.set($event)">
+      </app-folder-to-save>
 
       <div class="pt-4 border-t border-gray-700">
         <app-controls [isCapturing]="captureService.isCapturing()" [isRecording]="captureService.isRecording()"

@@ -50,12 +50,12 @@ export class CaptureService {
     return await invoke<WindowInfo[]>('get_windows');
   }
 
-  async getCapturePath(): Promise<string> {
-    return await invoke('get_capture_path');
+  async getCapturePath(subfolder?: string): Promise<string> {
+    return await invoke('get_capture_path', { subfolder: subfolder || null });
   }
 
-  async startCapture(windowId: string, intervalMs: number): Promise<void> {
-    await invoke('start_capture', { windowId, intervalMs });
+  async startCapture(windowId: string, intervalMs: number, subfolder?: string): Promise<void> {
+    await invoke('start_capture', { windowId, intervalMs, subfolder: subfolder || null });
     this.isCapturing.set(true);
   }
 
@@ -64,8 +64,8 @@ export class CaptureService {
     this.isCapturing.set(false);
   }
 
-  async startRecord(windowId: string): Promise<void> {
-    await invoke('start_record', { windowId });
+  async startRecord(windowId: string, subfolder?: string): Promise<void> {
+    await invoke('start_record', { windowId, subfolder: subfolder || null });
     // isRecording is set by the event listener, but we can optimistically set it or wait for event
   }
 

@@ -71,6 +71,7 @@ fn start_capture(
     state: State<'_, AppState>,
     window_id: String,
     interval_ms: u64,
+    subfolder: Option<String>,
 ) -> Result<(), String> {
     let mut capture_state = state.capture_state.lock().map_err(|e| e.to_string())?;
 
@@ -87,6 +88,13 @@ fn start_capture(
         .app_data_dir()
         .map_err(|e| e.to_string())?;
     captures_dir.push("captures");
+    // If a subfolder name was provided, append it to the path
+    if let Some(ref folder) = subfolder {
+        let folder = folder.trim();
+        if !folder.is_empty() {
+            captures_dir.push(folder);
+        }
+    }
     if !captures_dir.exists() {
         std::fs::create_dir_all(&captures_dir).map_err(|e| e.to_string())?;
     }
@@ -156,12 +164,18 @@ fn stop_capture(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn get_capture_path(app_handle: tauri::AppHandle) -> Result<String, String> {
+fn get_capture_path(app_handle: tauri::AppHandle, subfolder: Option<String>) -> Result<String, String> {
     let mut captures_dir = app_handle
         .path()
         .app_data_dir()
         .map_err(|e| e.to_string())?;
     captures_dir.push("captures");
+    if let Some(ref folder) = subfolder {
+        let folder = folder.trim();
+        if !folder.is_empty() {
+            captures_dir.push(folder);
+        }
+    }
     Ok(captures_dir.to_string_lossy().to_string())
 }
 
@@ -180,6 +194,7 @@ fn start_record(
     app_handle: tauri::AppHandle,
     state: State<'_, AppState>,
     window_id: String,
+    subfolder: Option<String>,
 ) -> Result<(), String> {
     let mut recording_process = state.recording_process.lock().map_err(|e| e.to_string())?;
 
@@ -220,6 +235,13 @@ fn start_record(
         .app_data_dir()
         .map_err(|e| e.to_string())?;
     captures_dir.push("captures");
+    // If a subfolder name was provided, append it to the path
+    if let Some(ref folder) = subfolder {
+        let folder = folder.trim();
+        if !folder.is_empty() {
+            captures_dir.push(folder);
+        }
+    }
     if !captures_dir.exists() {
         std::fs::create_dir_all(&captures_dir).map_err(|e| e.to_string())?;
     }

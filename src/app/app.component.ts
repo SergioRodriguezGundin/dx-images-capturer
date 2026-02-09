@@ -1,13 +1,14 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { WindowSelectorComponent } from './components/window-selector/window-selector.component';
 import { IntervalSelectorComponent } from './components/interval-selector/interval-selector.component';
+import { FolderToSaveComponent } from './components/folder-to-save/folder-to-save.component';
 import { ControlsComponent } from './components/controls/controls.component';
 import { CaptureService } from './services/capture.service';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, WindowSelectorComponent, IntervalSelectorComponent, ControlsComponent],
+  imports: [CommonModule, WindowSelectorComponent, IntervalSelectorComponent, FolderToSaveComponent, ControlsComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
@@ -16,11 +17,20 @@ export class AppComponent {
 
   selectedWindowId = signal<string>('');
   captureInterval = signal<number>(1000);
+  subfolderName = signal<string>('');
   baseCapturePath = signal<string>('');
 
-  async ngOnInit() {
+  constructor() {
+    // Update the displayed path whenever the subfolder name changes
+    effect(() => {
+      const subfolder = this.subfolderName();
+      this.updateCapturePath(subfolder);
+    });
+  }
+
+  private async updateCapturePath(subfolder: string) {
     try {
-      const path = await this.captureService.getCapturePath();
+      const path = await this.captureService.getCapturePath(subfolder || undefined);
       this.baseCapturePath.set(path);
     } catch (error) {
       console.error('Failed to get capture path', error);
@@ -33,7 +43,8 @@ export class AppComponent {
       return;
     }
     try {
-      await this.captureService.startCapture(this.selectedWindowId(), this.captureInterval());
+      const subfolder = this.subfolderName().trim() || undefined;
+      await this.captureService.startCapture(this.selectedWindowId(), this.captureInterval(), subfolder);
     } catch (error) {
       console.error('Failed to start capture', error);
       alert('Failed to start capture: ' + error);
@@ -54,7 +65,8 @@ export class AppComponent {
       return;
     }
     try {
-      await this.captureService.startRecord(this.selectedWindowId());
+      const subfolder = this.subfolderName().trim() || undefined;
+      await this.captureService.startRecord(this.selectedWindowId(), subfolder);
     } catch (error) {
       console.error('Failed to start recording', error);
       alert('Failed to start recording: ' + error);
