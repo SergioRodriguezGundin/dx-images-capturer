@@ -210,7 +210,7 @@ fn start_record(
 
     let ffmpeg_path = find_ffmpeg_binary()?;
 
-    // Find the window to get the title
+    // Find the window to get its position and dimensions
     let windows = Window::all().map_err(|e| e.to_string())?;
     let target_window = windows.into_iter().find(|w| {
         if let Ok(id) = w.id() {
@@ -220,13 +220,23 @@ fn start_record(
         }
     });
 
-    let window_title = match target_window {
-        Some(w) => w.title().map_err(|e| e.to_string())?,
+    let window = match target_window {
+        Some(w) => w,
         None => return Err("Target window not found".to_string()),
     };
 
-    if window_title.is_empty() {
-        return Err("Window has no title, cannot record with gdigrab".to_string());
+    // Get window geometry for desktop region capture
+    let window_x = window.x().map_err(|e| e.to_string())?;
+    let window_y = window.y().map_err(|e| e.to_string())?;
+    let window_width = window.width().map_err(|e| e.to_string())?;
+    let window_height = window.height().map_err(|e| e.to_string())?;
+
+    // H.264 requires even dimensions
+    let capture_width = window_width & !1u32;
+    let capture_height = window_height & !1u32;
+
+    if capture_width == 0 || capture_height == 0 {
+        return Err("Window has invalid dimensions for recording".to_string());
     }
 
     // Prepare output path
@@ -253,20 +263,30 @@ fn start_record(
     let filename = format!("recording_{}.mp4", timestamp);
     let output_path = captures_dir.join(filename);
 
-    // Build the ffmpeg command with encoding settings compatible with Windows Media Player
+    // Build the ffmpeg command using desktop region capture.
+    // Using `-i desktop` with offset/size instead of `-i title=...` because
+    // gdigrab's PrintWindow API returns stale content for hardware-accelerated
+    // windows (Chrome, Electron, WPF, etc.). Desktop region capture reads from
+    // the DWM-composited screen buffer which always has updated frames.
     let mut cmd = Command::new(&ffmpeg_path);
     cmd.arg("-f")
         .arg("gdigrab")
         .arg("-framerate")
         .arg("30")
+        .arg("-offset_x")
+        .arg(window_x.to_string())
+        .arg("-offset_y")
+        .arg(window_y.to_string())
+        .arg("-video_size")
+        .arg(format!("{}x{}", capture_width, capture_height))
         .arg("-i")
-        .arg(format!("title={}", window_title))
+        .arg("desktop")
         .arg("-vcodec")
         .arg("libx264")
         .arg("-pix_fmt")
-        .arg("yuv420p") // Required: gdigrab captures BGRA, yuv420p is the universally supported format
+        .arg("yuv420p")
         .arg("-profile:v")
-        .arg("baseline") // Baseline profile for maximum player compatibility
+        .arg("baseline")
         .arg("-level")
         .arg("4.0")
         .arg("-preset")
@@ -274,7 +294,7 @@ fn start_record(
         .arg("-crf")
         .arg("23")
         .arg("-movflags")
-        .arg("+faststart") // Move moov atom to the beginning for instant playback
+        .arg("+faststart")
         .arg(output_path.to_string_lossy().to_string())
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
